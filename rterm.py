@@ -1,8 +1,10 @@
 import tkinter as tk
-from tkinter import scrolledtext, simpledialog, filedialog, messagebox
+from tkinter import scrolledtext, simpledialog, filedialog, messagebox, ttk
 import subprocess
 import json
 import os
+
+interactive_process = None
 
 # Save and load settings
 SETTINGS_FILE = "settings_rterm.json"
@@ -19,33 +21,52 @@ def load_settings():
 
 # Function to handle commands
 def execute_command():
-    global command_log
+    global command_log, interactive_process
     command = entry.get()[len(settings["prompt"]):]  # Remove the prompt indicator
+
     if command.strip():
-        try:
-            # Check if PowerShell or other tools need special handling
-            if command.lower().startswith("powershell"):
-                process = subprocess.Popen(["powershell", "-NoLogo", "-NoProfile", "-Command", command[10:]], 
-                                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                output, error = process.communicate()
-            else:
-                process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                output, error = process.communicate()
+        if interactive_process:
+            try:
+                # Send input to the interactive subprocess
+                interactive_process.stdin.write(command + "\n")
+                interactive_process.stdin.flush()
+                # Read output from the subprocess
+                output = interactive_process.stdout.readline()  # Read one line at a time
+                terminal.insert(tk.END, output)
+                terminal.see(tk.END)
+            except Exception as e:
+                terminal.insert(tk.END, f"Error: {e}\n")
+        else:
+            try:
+                # Check for interactive programs
+                if command.lower() in ["python3", "powershell"]:
+                    interactive_process = subprocess.Popen(
+                        command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE, text=True
+                    )
+                    terminal.insert(tk.END, f"Started interactive session: {command}\n")
+                else:
+                    # Run non-interactive commands
+                    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+                    output = result.stdout if result.returncode == 0 else result.stderr
+                    terminal.insert(tk.END, f"{settings['prompt']}{command}\n{output}\n")
 
-            # Display the output or error
-            if output:
-                terminal.insert(tk.END, f"{settings['prompt']}{command}\n{output}\n")
-            if error:
-                terminal.insert(tk.END, f"{settings['prompt']}{command}\n{error}\n")
+                # Log the command and output
+                command_log.append(f"{settings['prompt']}{command}\n{output}\n")
+            except Exception as e:
+                terminal.insert(tk.END, f"Error: {e}\n")
+            finally:
+                entry.delete(0, tk.END)
+                entry.insert(0, settings["prompt"])
+                terminal.see(tk.END)
 
-            # Log the command and output
-            command_log.append(f"{settings['prompt']}{command}\n{output}\n{error}\n")
-        except Exception as e:
-            terminal.insert(tk.END, f"Error: {e}\n")
-        finally:
-            entry.delete(0, tk.END)
-            entry.insert(0, settings["prompt"])
-            terminal.see(tk.END)  # Scroll to the bottom
+# Add logic to terminate interactive processes with the "exit" command:
+def terminate_interactive_process():
+    global interactive_process
+    if interactive_process:
+        interactive_process.terminate()
+        interactive_process = None
+        terminal.insert(tk.END, "Exited interactive session.\n")
 
 # Export commands to a .log file
 def export_log():
@@ -59,12 +80,14 @@ def export_log():
             messagebox.showerror("Export Error", f"Failed to export log: {e}")
 
 # Open settings menu
+from tkinter.font import families  # Import for font listing
+
 def open_settings():
     def apply_settings():
         try:
             # Update font and prompt settings
-            font_family = font_var.get()
-            font_size = int(size_var.get())
+            font_family = font_combobox.get()
+            font_size = int(size_spinbox.get())
             settings["font"] = (font_family, font_size)
             settings["prompt"] = prompt_var.get()
             save_settings(settings)
@@ -80,17 +103,20 @@ def open_settings():
     # Create settings window
     settings_window = tk.Toplevel(root)
     settings_window.title("Settings")
-    settings_window.geometry("400x200")
+    settings_window.geometry("400x250")
 
-    # Font family selection
+    # Font family picker
     tk.Label(settings_window, text="Font Family:").grid(row=0, column=0, padx=10, pady=10)
-    font_var = tk.StringVar(value=settings["font"][0])
-    tk.Entry(settings_window, textvariable=font_var).grid(row=0, column=1, padx=10, pady=10)
+    font_combobox = ttk.Combobox(settings_window, values=list(families()), state="readonly")
+    font_combobox.set(settings["font"][0])  # Set current font as default
+    font_combobox.grid(row=0, column=1, padx=10, pady=10)
 
-    # Font size selection
+    # Font size spinner
     tk.Label(settings_window, text="Font Size:").grid(row=1, column=0, padx=10, pady=10)
-    size_var = tk.StringVar(value=str(settings["font"][1]))
-    tk.Entry(settings_window, textvariable=size_var).grid(row=1, column=1, padx=10, pady=10)
+    size_spinbox = tk.Spinbox(settings_window, from_=8, to=72, width=5)
+    size_spinbox.delete(0, tk.END)
+    size_spinbox.insert(0, settings["font"][1])  # Set current font size as default
+    size_spinbox.grid(row=1, column=1, padx=10, pady=10)
 
     # Prompt design
     tk.Label(settings_window, text="Prompt:").grid(row=2, column=0, padx=10, pady=10)
@@ -116,7 +142,7 @@ root.config(menu=menu_bar)
 
 file_menu = tk.Menu(menu_bar, tearoff=0)
 file_menu.add_command(label="Settings", command=open_settings)
-file_menu.add_command(label="Export Log", command=export_log)
+file_menu.add_command(label="Export Logs", command=export_log)
 menu_bar.add_cascade(label="File", menu=file_menu)
 
 # Terminal output area
