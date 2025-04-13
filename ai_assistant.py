@@ -1,8 +1,18 @@
-from google import genai
+import os
+from mistralai import Mistral
 
-client = genai.Client(api_key="AIzaSyAMp1GXXXACFUY_p4bI3LxuQuKgHM8n0hI")
+api_key = os.environ["MISTRAL_API_KEY"]
+model = "mistral-large-latest"
 
-response = client.models.generate_content(
-    model="gemini-2.0-flash", contents="Explain how AI works in a few words"
+client = Mistral(api_key=api_key)
+
+chat_response = client.chat.complete(
+    model= model,
+    messages = [
+        {
+            "role": "user",
+            "content": "What is the best French cheese?",
+        },
+    ]
 )
-print(response.text)
+print(chat_response.choices[0].message.content)
