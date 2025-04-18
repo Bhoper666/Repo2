@@ -1,3 +1,6 @@
 while True:
   data = input('>> ')
-  print('data')
+  print(data)
+  if data == 'exit':
+    break()
+    exit()
