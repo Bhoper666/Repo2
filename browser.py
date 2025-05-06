@@ -61,7 +61,6 @@ class Browser(QMainWindow):
             qurl = QUrl("https://www.google.com")
 
         browser = BrowserTab()
-        browser.setUrl(qurl)
 
         i = self.tab_widget.addTab(browser, label)
         self.tab_widget.setCurrentIndex(i)
