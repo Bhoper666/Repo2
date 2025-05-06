@@ -11,7 +11,7 @@ class BrowserTab(QWebEngineView):
 class Browser(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Simple Python Browser")
+        self.setWindowTitle("RBrowser")
         self.setGeometry(100, 100, 1200, 800)
 
         self.tab_widget = QTabWidget()
