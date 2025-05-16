@@ -20,7 +20,7 @@ def load_settings():
             return json.load(file)
     return {"font": ("Consolas", 12), "prompt": "> "}  # Default settings
 def clear_out():
-    terminal.delete(0)
+    terminal.delete(1.0, tk.END)
 def end_session():
     exit()
 
