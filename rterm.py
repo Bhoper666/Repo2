@@ -1,3 +1,4 @@
+from sys import stdout
 import tkinter as tk
 from tkinter import scrolledtext, simpledialog, filedialog, messagebox, ttk
 import subprocess
@@ -18,6 +19,10 @@ def load_settings():
         with open(SETTINGS_FILE, "r") as file:
             return json.load(file)
     return {"font": ("Consolas", 12), "prompt": "> "}  # Default settings
+def clear_out():
+    terminal.delete(0)
+def end_session():
+    exit()
 
 # Function to handle commands
 def execute_command():
@@ -143,6 +148,8 @@ root.config(menu=menu_bar)
 file_menu = tk.Menu(menu_bar, tearoff=0)
 file_menu.add_command(label="Settings", command=open_settings)
 file_menu.add_command(label="Export Logs", command=export_log)
+file_menu.add_command(label="Clear output", command=clear_out)
+file_menu.add_command(label="Finish session", command=end_session)
 menu_bar.add_cascade(label="File", menu=file_menu)
 
 # Terminal output area
