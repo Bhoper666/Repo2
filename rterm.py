@@ -1,10 +1,9 @@
-from sys import stdout
 import tkinter as tk
-from tkinter import scrolledtext, simpledialog, filedialog, messagebox, ttk
+from tkinter import scrolledtext, filedialog, messagebox, ttk
 import subprocess
 import json
 import os
-
+from tkinter.font import families
 interactive_process = None
 
 # Save and load settings
@@ -85,7 +84,6 @@ def export_log():
             messagebox.showerror("Export Error", f"Failed to export log: {e}")
 
 # Open settings menu
-from tkinter.font import families  # Import for font listing
 
 def open_settings():
     def apply_settings():
